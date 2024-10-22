@@ -54,12 +54,12 @@ executors:
     shell: /bin/bash
     docker:
       - name: localhost
-        image: cimg/php:8.1
+        image: cimg/php:8.2
   builder-executor:
     resource_class: small
     shell: /bin/bash
     docker:
-      - image: cimg/php:8.1-node
+      - image: cimg/php:8.2-node
         name: localhost
   simple-executor:
     resource_class: small
@@ -110,6 +110,7 @@ jobs:
   lint-phpcs:
     executor: php-executor
     steps:
+      - checkout
       - *attach_workspace
       - run:
           name: Install PHP_CodeSniffer and PHPCompatibility
@@ -133,6 +134,7 @@ jobs:
   security-check-dependencies:
     executor: php-executor
     steps:
+      - checkout
       - *attach_workspace
       - run:
           name: Install local-php-security-checker
@@ -151,6 +153,7 @@ jobs:
   test-phpunit:
     executor: php-executor
     steps:
+      - checkout
       - *attach_workspace
       - run:
           name: Check if PHPUnit tests are present, otherwise skip the job
@@ -253,14 +256,14 @@ workflows:
                 - main
                 - master
                 - /^release\/.*/
-      - deploy-ssh-production:
-          requires:
-              - hold
-          filters:
-            branches:
-              only:
-                - main
-                - master
+#      - deploy-ssh-production:
+#          requires:
+#              - hold
+#          filters:
+#            branches:
+#              only:
+#                - main
+#                - master
       - deploy-ssh-staging:
           requires:
             - hold
