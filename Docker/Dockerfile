@@ -11,7 +11,7 @@ ARG XDEBUG_VERSION="3.3.0"
 ARG BUILD_DATE
 ARG TAG
 ARG GIT_COMMIT
-ARG GIT_URL
+ARG GIT_URL="https://github.com/MatisPrograms/dev-sec-ops.git"
 ARG PROJECT_USERNAME="SI5"
 
 ENV VERSION="${TAG}"
@@ -94,6 +94,9 @@ RUN chown -R www-data:www-data /var/www/html
 
 # Define the working directory
 WORKDIR /var/www/html
+
+# Install the application dependencies
+RUN composer install
 
 # Exposez le port 80
 EXPOSE 80
