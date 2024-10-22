@@ -1,0 +1,14 @@
+services:
+  php-devops-app:
+    build:
+      context: .
+      dockerfile: ./Docker/Dockerfile
+      args:
+        TAG: "v1.0.0"
+        GIT_COMMIT: ${GIT_COMMIT}
+        BUILD_DATE: ${BUILD_DATE}
+    environment:
+      APP_SECRET: ${APP_SECRET}
+    ports:
+      - "8080:80"
+    container_name: php-devops-app
