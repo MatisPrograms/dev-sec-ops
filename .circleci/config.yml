@@ -205,8 +205,6 @@ jobs:
     steps:
       - attach_workspace:
           at: .
-      - run: |
-          cat bash.env >> $BASH_ENV
       - checkout
       - sonarcloud/scan
       - setup_remote_docker:
@@ -220,6 +218,9 @@ jobs:
               circleci step halt
               exit 0
             fi
+
+            cat bash.env
+            cat bash.env >> $BASH_ENV
 
             # Sanitize the repository name and branch name
             REPOSITORY=$(echo "ghcr.io/$GH_PROJECT_USERNAME/$GH_PROJECT_REPONAME" | tr '[:upper:]' '[:lower:]' | tr -d '_')
