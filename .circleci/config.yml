@@ -248,6 +248,8 @@ jobs:
   deploy-ssh-staging:
     executor: simple-executor
     steps:
+      - attach_workspace:
+          at: workspace
       - run:
           name: Inject Environment Variables
           command: |
