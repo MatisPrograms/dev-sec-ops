@@ -220,6 +220,8 @@ jobs:
             # Load the environment variables
             export $(cat workspace/bash.env | xargs)
 
+            env
+
             # Sanitize the repository name and branch name
             REPOSITORY=$(echo "ghcr.io/$GH_PROJECT_USERNAME/$GH_PROJECT_REPONAME" | tr '[:upper:]' '[:lower:]' | tr -d '_')
             TAG=$(echo $CIRCLE_BRANCH | tr '[:upper:]' '[:lower:]' | tr '/' '-' | tr -cd '[:alnum:]._-' | cut -c 1-128)
@@ -256,14 +258,15 @@ jobs:
             echo "export $(cat workspace/bash.env | xargs)" >> $BASH_ENV
       - add_ssh_keys:
           fingerprints:
-            - "${STAGING_SSH_FINGERPRINT}"
+            - "${EC2_SSH_FINGERPRINT}"
       - deploy:
           name: Deploy to AWS
           command: |
+            env
             set -x
-            ssh -o StrictHostKeyChecking=no $STAGING_SSH_USER@$STAGING_SSH_HOST \<< EOF
+            ssh -o StrictHostKeyChecking=no $EC2_SSH_USER@$EC2_SSH_HOST \<< EOF
             PHP_FPM_VERSION=$(/usr/bin/php -v | head -n 1 | cut -d ' ' -f 2 | cut -d '.' -f 1-2)
-            cd $STAGING_DEPLOY_DIRECTORY
+            cd $EC2_DEPLOY_DIRECTORY
             git pull origin $CIRCLE_BRANCH
             composer install --optimize-autoloader --no-interaction --prefer-dist
             (flock -w 10 9 || exit 1; sudo -S service php8.3-fpm restart ) 9>/tmp/fpm.lock
@@ -273,16 +276,22 @@ jobs:
   deploy-ssh-production:
     executor: simple-executor
     steps:
+      - attach_workspace:
+          at: workspace
+      - run:
+          name: Inject Environment Variables
+          command: |
+            echo "export $(cat workspace/bash.env | xargs)" >> $BASH_ENV
       - add_ssh_keys:
           fingerprints:
-            - "${STAGING_SSH_FINGERPRINT}"
+            - "${EC2_SSH_FINGERPRINT}"
       - deploy:
           name: Deploy to AWS
           command: |
             set -x
-            ssh -o StrictHostKeyChecking=no $STAGING_SSH_USER@$STAGING_SSH_HOST \<< EOF
+            ssh -o StrictHostKeyChecking=no $EC2_SSH_USER@$EC2_SSH_HOST \<< EOF
             PHP_FPM_VERSION=$(php -v | head -n 1 | cut -d ' ' -f 2 | cut -d '.' -f 1-2)
-            cd $STAGING_DEPLOY_DIRECTORY
+            cd $EC2_DEPLOY_DIRECTORY
             git pull origin $CIRCLE_BRANCH
             composer install --optimize-autoloader --no-interaction --prefer-dist
             (flock -w 10 9 || exit 1; sudo -S service php${PHP_FPM_VERSION}-fpm restart ) 9>/tmp/fpm.lock
@@ -347,7 +356,6 @@ workflows:
           filters:
             branches:
               only:
-                - /^release\/.*/
                 - /^release\/.*/
                 - /^hotfix\/.*/
                 - /^bugfix\/.*/
