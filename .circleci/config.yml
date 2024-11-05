@@ -241,7 +241,7 @@ workflows:
       - debug-info
       - build-setup
       - build-docker-image:
-          context: sonarcloud
+          context: SonarCloud
           filters:
             branches:
               only:
