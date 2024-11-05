@@ -34,6 +34,8 @@ version: 2.1
 #  2. Suffixes based on the specific tool or task:
 #  For example, for a job that uses PHP_CodeSniffer, use phpcs as a suffix.
 
+orbs:
+  sonarcloud: sonarsource/sonarcloud@2.0.0
 
 # Default configuration for persist_to_workspace and attach_workspace commands
 persist_to_workspace: &persist_to_workspace
@@ -176,6 +178,7 @@ jobs:
     executor: builder-executor
     steps:
       - checkout
+      - sonarcloud/scan
       - setup_remote_docker:
           version: 20.10.23
           docker_layer_caching: true
@@ -277,6 +280,7 @@ workflows:
   container_workflow:
     jobs:
       - build-docker-image:
+          context: sonarcloud
           filters:
             branches:
               only:
