@@ -34,6 +34,8 @@ version: 2.1
 #  2. Suffixes based on the specific tool or task:
 #  For example, for a job that uses PHP_CodeSniffer, use phpcs as a suffix.
 
+orbs:
+  sonarcloud: sonarsource/sonarcloud@2.0.0
 
 # Default configuration for persist_to_workspace and attach_workspace commands
 persist_to_workspace: &persist_to_workspace
@@ -129,8 +131,20 @@ jobs:
       - store_artifacts:
           path: phpcs-report.txt
           destination: phpcs-report
-
-
+  
+  php-loc:
+    executor: php-executor
+    steps:
+      - checkout
+      - run:
+          name: Install php-loc
+          command: |
+            wget https://phar.phpunit.de/phploc.phar
+            chmod +x phploc.phar
+      - run:
+          name: Run scan of the code with phploc
+          command: |
+            php phploc.phar src
 
   security-check-dependencies:
     executor: php-executor
@@ -176,6 +190,7 @@ jobs:
     executor: builder-executor
     steps:
       - checkout
+      - sonarcloud/scan
       - setup_remote_docker:
           # version: 27.3.1
           docker_layer_caching: true
@@ -233,8 +248,23 @@ jobs:
             EOF
 
 
-#  deploy-ssh-production:
-# It's up to you :)
+  deploy-ssh-production:
+    executor: simple-executor
+    steps:
+      - add_ssh_keys:
+          fingerprints:
+            - "${STAGING_SSH_FINGERPRINT}"
+      - deploy:
+          name: Deploy to AWS
+          command: |
+            set -x
+            ssh -o StrictHostKeyChecking=no $STAGING_SSH_USER@$STAGING_SSH_HOST \<< EOF
+            PHP_FPM_VERSION=$(php -v | head -n 1 | cut -d ' ' -f 2 | cut -d '.' -f 1-2)
+            cd $STAGING_DEPLOY_DIRECTORY
+            git pull origin $CIRCLE_BRANCH
+            composer install --optimize-autoloader --no-interaction --prefer-dist
+            (flock -w 10 9 || exit 1; sudo -S service php${PHP_FPM_VERSION}-fpm restart ) 9>/tmp/fpm.lock
+            EOF
 
 
 workflows:
@@ -242,9 +272,23 @@ workflows:
     jobs:
       - debug-info
       - build-setup
+      - build-docker-image:
+          context: SonarCloud
+          filters:
+            branches:
+              only:
+                - master
+                - main
+                - develop
+                - /^feature\/.*/
+                - /^release\/.*/
+                - /^hotfix\/.*/
+                - /^bugfix\/.*/
+                - SonarQube
       - lint-phpcs:
           requires:
             - build-setup
+      - php-loc
       - security-check-dependencies:
           requires:
             - build-setup
@@ -274,18 +318,6 @@ workflows:
             branches:
               only:
                 - /^release\/.*/
-
-
-  container_workflow:
-    jobs:
-      - build-docker-image:
-          filters:
-            branches:
-              only:
-                - master
-                - main
-                - develop
-                - /^feature\/.*/
                 - /^release\/.*/
                 - /^hotfix\/.*/
                 - /^bugfix\/.*/
