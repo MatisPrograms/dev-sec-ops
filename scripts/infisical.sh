@@ -10,3 +10,4 @@ echo $response | jq -r '.secrets[] | "export \(.secretKey)=\(.secretValue)"' | w
 done
 
 cp $BASH_ENV bash.env
+cat bash.env

@@ -209,6 +209,7 @@ jobs:
       - run: 
           name: Inject Environment Variables
           command: |
+            cat bash.env
             export $(cat bash.env | xargs)
       - run:
           name: Build and Push Docker Image to GHCR (GitHub Container Registry)
