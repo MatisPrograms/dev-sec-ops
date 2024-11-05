@@ -208,10 +208,6 @@ jobs:
       - sonarcloud/scan
       - setup_remote_docker:
           docker_layer_caching: true
-      - run: 
-          name: Inject Environment Variables
-          command: |
-            export $(cat workspace/bash.env | xargs)
       - run:
           name: Build and Push Docker Image to GHCR (GitHub Container Registry)
           command: |
@@ -220,6 +216,15 @@ jobs:
               circleci step halt
               exit 0
             fi
+
+            # Load the environment variables
+            export $(cat workspace/bash.env | xargs)
+
+            # print workspace/bash.env
+            cat workspace/bash.env
+
+            # print env variables
+            env
 
             # Sanitize the repository name and branch name
             REPOSITORY=$(echo "ghcr.io/$GH_PROJECT_USERNAME/$GH_PROJECT_REPONAME" | tr '[:upper:]' '[:lower:]' | tr -d '_')
