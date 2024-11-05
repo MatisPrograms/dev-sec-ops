@@ -220,12 +220,6 @@ jobs:
             # Load the environment variables
             export $(cat workspace/bash.env | xargs)
 
-            # print workspace/bash.env
-            cat workspace/bash.env
-
-            # print env variables
-            env
-
             # Sanitize the repository name and branch name
             REPOSITORY=$(echo "ghcr.io/$GH_PROJECT_USERNAME/$GH_PROJECT_REPONAME" | tr '[:upper:]' '[:lower:]' | tr -d '_')
             TAG=$(echo $CIRCLE_BRANCH | tr '[:upper:]' '[:lower:]' | tr '/' '-' | tr -cd '[:alnum:]._-' | cut -c 1-128)
@@ -254,6 +248,10 @@ jobs:
   deploy-ssh-staging:
     executor: simple-executor
     steps:
+      - run:
+          name: Inject Environment Variables
+          command: |
+            echo "export $(cat workspace/bash.env | xargs)" >> $BASH_ENV
       - add_ssh_keys:
           fingerprints:
             - "${STAGING_SSH_FINGERPRINT}"
