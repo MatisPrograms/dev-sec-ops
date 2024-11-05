@@ -202,9 +202,9 @@ jobs:
   build-docker-image:
     executor: builder-executor
     steps:
+      - checkout
       - attach_workspace:
           at: workspace
-      - checkout
       - sonarcloud/scan
       - setup_remote_docker:
           docker_layer_caching: true
