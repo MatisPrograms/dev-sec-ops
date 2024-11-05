@@ -1,6 +1,12 @@
 #!/bin/bash
 
-INFISICAL_TOKEN=${CIRCLE_BRANCH:-main} == "main" ? $INFISICAL_PROD : $INFISICAL_DEV
+if [ -z "$CIRCLE_BRANCH" ] || [ "$CIRCLE_BRANCH" == "main" ]; then
+  INFISICAL_TOKEN=$INFISICAL_PROD
+else
+  INFISICAL_TOKEN=$INFISICAL_DEV
+fi
+
+echo "Fetching secrets from Infisical for $CIRCLE_BRANCH branch using token $INFISICAL_TOKEN"
 
 response=$(curl --silent --request GET \
   --url https://us.infisical.com/api/v3/secrets/raw \
