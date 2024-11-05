@@ -1,7 +1,5 @@
 #!/bin/bash
 
-set -x 
-
 response=$(curl --silent --request GET \
   --url https://us.infisical.com/api/v3/secrets/raw \
   --header 'Authorization: Bearer '$INFISICAL_DEV)
