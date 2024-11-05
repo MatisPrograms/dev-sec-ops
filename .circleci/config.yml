@@ -243,6 +243,18 @@ workflows:
     jobs:
       - debug-info
       - build-setup
+      - build-docker-image:
+          context: sonarcloud
+          filters:
+            branches:
+              only:
+                - master
+                - main
+                - develop
+                - /^feature\/.*/
+                - /^release\/.*/
+                - /^hotfix\/.*/
+                - /^bugfix\/.*/
       - lint-phpcs:
           requires:
             - build-setup
@@ -275,19 +287,3 @@ workflows:
             branches:
               only:
                 - /^release\/.*/
-
-
-  container_workflow:
-    jobs:
-      - build-docker-image:
-          context: sonarcloud
-          filters:
-            branches:
-              only:
-                - master
-                - main
-                - develop
-                - /^feature\/.*/
-                - /^release\/.*/
-                - /^hotfix\/.*/
-                - /^bugfix\/.*/
