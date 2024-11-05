@@ -177,8 +177,6 @@ jobs:
           path: security-report.json
           destination: security-report
 
-
-
   test-phpunit:
     executor: php-executor
     steps:
@@ -199,7 +197,6 @@ jobs:
           name: Run PHPUnit
           command: ./vendor/bin/phpunit --testsuite=Unit
 
-
   build-docker-image:
     executor: builder-executor
     steps:
@@ -208,9 +205,11 @@ jobs:
       - checkout
       - sonarcloud/scan
       - setup_remote_docker:
-          # version: 27.3.1
           docker_layer_caching: true
       - run:
+          name: Inject Environment Variables
+          command: |
+            export $(cat bash.env | xargs)
           name: Build and Push Docker Image to GHCR (GitHub Container Registry)
           command: |
             if [ ! -z "$SKIP_BUILD" ]; then
@@ -218,9 +217,6 @@ jobs:
               circleci step halt
               exit 0
             fi
-
-            cat bash.env
-            cat bash.env >> $BASH_ENV
 
             # Sanitize the repository name and branch name
             REPOSITORY=$(echo "ghcr.io/$GH_PROJECT_USERNAME/$GH_PROJECT_REPONAME" | tr '[:upper:]' '[:lower:]' | tr -d '_')
@@ -247,7 +243,6 @@ jobs:
             # Push the Docker image
             docker push $REPOSITORY:$TAG
 
-
   deploy-ssh-staging:
     executor: simple-executor
     steps:
@@ -270,10 +265,6 @@ jobs:
   deploy-ssh-production:
     executor: simple-executor
     steps:
-      - attach_workspace:
-          at: .
-      - run: |
-          cat bash.env >> $BASH_ENV
       - add_ssh_keys:
           fingerprints:
             - "${STAGING_SSH_FINGERPRINT}"
