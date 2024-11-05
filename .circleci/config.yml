@@ -255,6 +255,7 @@ workflows:
                 - /^release\/.*/
                 - /^hotfix\/.*/
                 - /^bugfix\/.*/
+                - /^SonarQube\/.*/
       - lint-phpcs:
           requires:
             - build-setup
