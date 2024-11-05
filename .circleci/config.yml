@@ -206,10 +206,11 @@ jobs:
       - sonarcloud/scan
       - setup_remote_docker:
           docker_layer_caching: true
-      - run:
+      - run: 
           name: Inject Environment Variables
           command: |
             export $(cat bash.env | xargs)
+      - run:
           name: Build and Push Docker Image to GHCR (GitHub Container Registry)
           command: |
             if [ ! -z "$SKIP_BUILD" ]; then
