@@ -342,6 +342,7 @@ workflows:
 #                - master
       - deploy-ssh-staging:
           requires:
+            - fetch-env-var
             - hold
           filters:
             branches:
