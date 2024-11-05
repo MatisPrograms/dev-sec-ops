@@ -177,7 +177,7 @@ jobs:
     steps:
       - checkout
       - setup_remote_docker:
-          version: 27.3.1
+          # version: 27.3.1
           docker_layer_caching: true
       - run:
           name: Build and Push Docker Image to GHCR (GitHub Container Registry)
@@ -195,8 +195,10 @@ jobs:
             # Login to GHCR
             echo "$GHCR_PAT" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
 
+            set -x
+
             # Build the Docker image
-            docker build \
+            docker buildx build \
             -f Docker/Dockerfile \
             -t $REPOSITORY:$TAG \
             --build-arg BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ") \
