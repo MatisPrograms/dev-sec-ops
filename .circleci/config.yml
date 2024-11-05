@@ -83,8 +83,10 @@ jobs:
           command: |
             chmod +x ./scripts/infisical.sh
             ./scripts/infisical.sh
+            mkdir -p workspace
+            mv bash.env workspace/
       - persist_to_workspace:
-          root: .
+          root: workspace
           paths:
             - bash.env
 
@@ -201,7 +203,7 @@ jobs:
     executor: builder-executor
     steps:
       - attach_workspace:
-          at: .
+          at: workspace
       - checkout
       - sonarcloud/scan
       - setup_remote_docker:
@@ -209,8 +211,7 @@ jobs:
       - run: 
           name: Inject Environment Variables
           command: |
-            cat bash.env
-            export $(cat bash.env | xargs)
+            export $(cat workspace/bash.env | xargs)
       - run:
           name: Build and Push Docker Image to GHCR (GitHub Container Registry)
           command: |

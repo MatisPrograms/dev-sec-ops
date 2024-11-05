@@ -4,10 +4,8 @@ response=$(curl --silent --request GET \
   --url https://us.infisical.com/api/v3/secrets/raw \
   --header 'Authorization: Bearer '$INFISICAL_DEV)
 
-echo $response | jq -r '.secrets[] | "export \(.secretKey)=\(.secretValue)"' | while read -r line; do
-  echo "Setting secret: $line"
-  eval $line >> $BASH_ENV
-done
+touch bash.env
 
-cp $BASH_ENV bash.env
-cat bash.env
+echo $response | jq -r '.secrets[] | "\(.secretKey)=\(.secretValue)"' | while read -r line; do
+  echo $line >> bash.env
+done
