@@ -74,6 +74,20 @@ executors:
 
 
 jobs:
+  fetch-env-var:
+    executor: simple-executor
+    steps:
+      - checkout
+      - run:
+          name: Fetch Environment Variables from Infisical
+          command: |
+            chmod +x ./scripts/infisical.sh
+            ./scripts/infisical.sh
+      - persist_to_workspace:
+          root: .
+          paths:
+            - bash.env
+
   debug-info:
     executor: php-executor
     steps:
@@ -189,6 +203,10 @@ jobs:
   build-docker-image:
     executor: builder-executor
     steps:
+      - attach_workspace:
+          at: .
+      - run: |
+          cat bash.env >> $BASH_ENV
       - checkout
       - sonarcloud/scan
       - setup_remote_docker:
@@ -251,6 +269,10 @@ jobs:
   deploy-ssh-production:
     executor: simple-executor
     steps:
+      - attach_workspace:
+          at: .
+      - run: |
+          cat bash.env >> $BASH_ENV
       - add_ssh_keys:
           fingerprints:
             - "${STAGING_SSH_FINGERPRINT}"
@@ -270,9 +292,26 @@ jobs:
 workflows:
   main_workflow:
     jobs:
+      - fetch-env-var
       - debug-info
       - build-setup
+      - lint-phpcs:
+          requires:
+            - build-setup
+      - php-loc
+      - security-check-dependencies:
+          requires:
+            - build-setup
+      - test-phpunit:
+          requires:
+            - build-setup
       - build-docker-image:
+          requires:
+            - fetch-env-var
+            - lint-phpcs
+            - security-check-dependencies
+            - test-phpunit
+            - php-loc
           context: SonarCloud
           filters:
             branches:
@@ -285,16 +324,6 @@ workflows:
                 - /^hotfix\/.*/
                 - /^bugfix\/.*/
                 - SonarQube
-      - lint-phpcs:
-          requires:
-            - build-setup
-      - php-loc
-      - security-check-dependencies:
-          requires:
-            - build-setup
-      - test-phpunit:
-          requires:
-            - build-setup
       - hold:
           type: approval
           filters:
