@@ -34,6 +34,18 @@ To set up the project locally, follow these steps:
 ## Usage
 You can create a `.env` file in the project root directory to configure the environment variables for the web application. Here is an example of the `.env` file: `.env.example`.
 
+## CircleCI
+
+### Testing jobs locally
+
+To test the CircleCI jobs locally, you can use the CircleCI CLI. First, install the CLI by following the instructions in the [CircleCI CLI documentation](https://circleci.com/docs/2.0/local-cli/).
+Once you have installed the CLI, you can run the following command to test the jobs locally:
+
+```sh
+circleci config process .circleci/config.yml > process.yml
+circleci local execute -c process.yml $JOB_NAME
+```
+
 ## Contributing
 Contributions are welcome! Please fork the repository and create a pull request with your changes.
 
