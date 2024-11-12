@@ -203,11 +203,6 @@ jobs:
     executor: builder-executor
     steps:
       - checkout
-      - attach_workspace:
-          at: workspace
-      - sonarcloud/scan
-      - setup_remote_docker:
-          docker_layer_caching: true
       - run:
           name: Build and Push Docker Image to GHCR (GitHub Container Registry)
           command: |
@@ -246,6 +241,7 @@ jobs:
 
             # Push the Docker image
             docker push $REPOSITORY:$TAG
+      - sonarcloud/scan
 
   deploy-ssh-staging:
     executor: simple-executor
