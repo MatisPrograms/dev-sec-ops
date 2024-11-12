@@ -162,6 +162,20 @@ jobs:
           command: |
             php phploc.phar src
 
+  phpmetrics:
+    executor: php-executor
+    steps:
+      - checkout
+      - run:
+          name: Install phpmetrics
+          command: |
+            curl -sS https://getcomposer.org/installer | php
+            composer require phpmetrics/phpmetrics --dev
+      - run:
+          name: Run phpmetrics
+          command: |
+            php ./vendor/bin/phpmetrics --report-html=myreport src
+
   security-check-dependencies:
     executor: php-executor
     steps:
@@ -305,6 +319,7 @@ workflows:
           requires:
             - build-setup
       - php-loc
+      - phpmetrics
       - security-check-dependencies:
           requires:
             - build-setup
