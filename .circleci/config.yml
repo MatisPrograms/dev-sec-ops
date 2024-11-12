@@ -221,7 +221,7 @@ jobs:
 
             # Push the Docker image
             docker push $REPOSITORY:$TAG
-        - sonarcloud/scan
+      - sonarcloud/scan
 
 
   deploy-ssh-staging:
