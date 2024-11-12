@@ -294,7 +294,9 @@ jobs:
             TAG=$(echo $CIRCLE_BRANCH | tr '[:upper:]' '[:lower:]' | tr '/' '-' | tr -cd '[:alnum:]._-' | cut -c 1-128)
             echo "$GHCR_PAT" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
             docker pull $REPOSITORY:$TAG
-            docker stop $(docker ps -q)
+            if [ ! -z "$(docker ps -q)" ]; then
+              docker stop $(docker ps -q)
+            fi
             docker run -d -p 80:80 $REPOSITORY:$TAG -e APP_SECRET="test"
             EOF
 
