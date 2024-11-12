@@ -345,6 +345,7 @@ workflows:
       - deploy-ssh-production:
           requires:
             - fetch-env-var
+            - build-docker-image
             - hold
           filters:
             branches:
