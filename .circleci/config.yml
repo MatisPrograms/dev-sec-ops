@@ -34,6 +34,8 @@ version: 2.1
 #  2. Suffixes based on the specific tool or task:
 #  For example, for a job that uses PHP_CodeSniffer, use phpcs as a suffix.
 
+orbs:
+  sonarcloud: sonarsource/sonarcloud@2.0.0
 
 # Default configuration for persist_to_workspace and attach_workspace commands
 persist_to_workspace: &persist_to_workspace
@@ -54,13 +56,14 @@ executors:
     shell: /bin/bash
     docker:
       - name: localhost
-        image: cimg/php:8.1
+        image: cimg/php:8.2
   builder-executor:
     resource_class: small
     shell: /bin/bash
     docker:
-      - image: cimg/php:8.1-node
+      - image: cimg/php:8.2-node
         name: localhost
+        user: root
   simple-executor:
     resource_class: small
     shell: /bin/bash
@@ -71,6 +74,22 @@ executors:
 
 
 jobs:
+  fetch-env-var:
+    executor: simple-executor
+    steps:
+      - checkout
+      - run:
+          name: Fetch Environment Variables from Infisical
+          command: |
+            chmod +x ./scripts/infisical.sh
+            ./scripts/infisical.sh
+            mkdir -p workspace
+            mv bash.env workspace/
+      - persist_to_workspace:
+          root: workspace
+          paths:
+            - bash.env
+
   debug-info:
     executor: php-executor
     steps:
@@ -110,6 +129,7 @@ jobs:
   lint-phpcs:
     executor: php-executor
     steps:
+      - checkout
       - *attach_workspace
       - run:
           name: Install PHP_CodeSniffer and PHPCompatibility
@@ -127,12 +147,25 @@ jobs:
       - store_artifacts:
           path: phpcs-report.txt
           destination: phpcs-report
-
-
+  
+  php-loc:
+    executor: php-executor
+    steps:
+      - checkout
+      - run:
+          name: Install php-loc
+          command: |
+            wget https://phar.phpunit.de/phploc.phar
+            chmod +x phploc.phar
+      - run:
+          name: Run scan of the code with phploc
+          command: |
+            php phploc.phar src
 
   security-check-dependencies:
     executor: php-executor
     steps:
+      - checkout
       - *attach_workspace
       - run:
           name: Install local-php-security-checker
@@ -146,11 +179,10 @@ jobs:
           path: security-report.json
           destination: security-report
 
-
-
   test-phpunit:
     executor: php-executor
     steps:
+      - checkout
       - *attach_workspace
       - run:
           name: Check if PHPUnit tests are present, otherwise skip the job
@@ -167,13 +199,14 @@ jobs:
           name: Run PHPUnit
           command: ./vendor/bin/phpunit --testsuite=Unit
 
-
   build-docker-image:
     executor: builder-executor
     steps:
       - checkout
+      - attach_workspace:
+          at: workspace
+      - sonarcloud/scan
       - setup_remote_docker:
-          version: 20.10.23
           docker_layer_caching: true
       - run:
           name: Build and Push Docker Image to GHCR (GitHub Container Registry)
@@ -184,67 +217,123 @@ jobs:
               exit 0
             fi
 
+            # Load the environment variables
+            export $(cat workspace/bash.env | xargs)
+
+            env
+
             # Sanitize the repository name and branch name
-            REPOSITORY=$(echo "ghcr.io/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME" | tr '[:upper:]' '[:lower:]' | tr -d '_')
+            REPOSITORY=$(echo "ghcr.io/$GH_PROJECT_USERNAME/$GH_PROJECT_REPONAME" | tr '[:upper:]' '[:lower:]' | tr -d '_')
             TAG=$(echo $CIRCLE_BRANCH | tr '[:upper:]' '[:lower:]' | tr '/' '-' | tr -cd '[:alnum:]._-' | cut -c 1-128)
 
             # Login to GHCR
             echo "$GHCR_PAT" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
 
+            set -x
+
             # Build the Docker image
-            docker build \
-            -f docker/Dockerfile \
-            -t $REPOSITORY:$TAG \
+            docker buildx build \
+            -f Docker/Dockerfile \
+            -t "$REPOSITORY":$TAG \
             --build-arg BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ") \
             --build-arg TAG="${TAG}" \
             --build-arg GIT_COMMIT=$(git rev-parse -q --verify HEAD) \
             --build-arg GIT_URL=$(echo ${CIRCLE_REPOSITORY_URL} | sed -e 's/^git@/https:\/\//g' -e 's/\.git$//g' -e 's/:/\//g') \
             --build-arg SQLITE_VERSION=3430200 \
             --build-arg SQLITE_YEAR=2023 \
-            --build-arg PROJECT_USERNAME=$CIRCLE_PROJECT_USERNAME \
+            --build-arg PROJECT_USERNAME=$GH_PROJECT_USERNAME \
             .
 
             # Push the Docker image
             docker push $REPOSITORY:$TAG
 
-
   deploy-ssh-staging:
     executor: simple-executor
     steps:
+      - attach_workspace:
+          at: workspace
+      - run:
+          name: Inject Environment Variables
+          command: |
+            echo "export $(cat workspace/bash.env | xargs)" >> $BASH_ENV
       - add_ssh_keys:
           fingerprints:
-            - "${STAGING_SSH_FINGERPRINT}"
+            - "${EC2_SSH_FINGERPRINT}"
+      - deploy:
+          name: Deploy to AWS
+          command: |
+            env
+            set -x
+            ssh -o StrictHostKeyChecking=no $EC2_SSH_USER@$EC2_SSH_HOST \<< EOF
+            PHP_FPM_VERSION=$(/usr/bin/php -v | head -n 1 | cut -d ' ' -f 2 | cut -d '.' -f 1-2)
+            cd $EC2_DEPLOY_DIRECTORY
+            git pull origin $CIRCLE_BRANCH
+            composer install --optimize-autoloader --no-interaction --prefer-dist
+            (flock -w 10 9 || exit 1; sudo -S service php8.3-fpm restart ) 9>/tmp/fpm.lock
+            EOF
+
+
+  deploy-ssh-production:
+    executor: simple-executor
+    steps:
+      - attach_workspace:
+          at: workspace
+      - run:
+          name: Inject Environment Variables
+          command: |
+            echo "export $(cat workspace/bash.env | xargs)" >> $BASH_ENV
+      - add_ssh_keys:
+          fingerprints:
+            - "${EC2_SSH_FINGERPRINT}"
       - deploy:
           name: Deploy to AWS
           command: |
             set -x
-            ssh -o StrictHostKeyChecking=no $STAGING_SSH_USER@$STAGING_SSH_HOST \<< EOF
-            PHP_FPM_VERSION=$(php -v | head -n 1 | cut -d ' ' -f 2 | cut -d '.' -f 1-2)
-            cd $STAGING_DEPLOY_DIRECTORY
-            git pull origin $CIRCLE_BRANCH
-            composer install --optimize-autoloader --no-interaction --prefer-dist
-            (flock -w 10 9 || exit 1; sudo -S service php${PHP_FPM_VERSION}-fpm restart ) 9>/tmp/fpm.lock
+            ssh -o StrictHostKeyChecking=no $EC2_SSH_USER@$EC2_SSH_HOST \<< EOF
+            REPOSITORY=$(echo "ghcr.io/$GH_PROJECT_USERNAME/$GH_PROJECT_REPONAME" | tr '[:upper:]' '[:lower:]' | tr -d '_')
+            TAG=$(echo $CIRCLE_BRANCH | tr '[:upper:]' '[:lower:]' | tr '/' '-' | tr -cd '[:alnum:]._-' | cut -c 1-128)
+            echo "$GHCR_PAT" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
+            docker pull $REPOSITORY:$TAG
+            docker stop $(docker ps -q)
+            docker run -d -p 80:80 $REPOSITORY:$TAG
             EOF
-
-
-#  deploy-ssh-production:
-# It's up to you :)
 
 
 workflows:
   main_workflow:
     jobs:
+      - fetch-env-var
       - debug-info
       - build-setup
       - lint-phpcs:
           requires:
             - build-setup
+      - php-loc
       - security-check-dependencies:
           requires:
             - build-setup
       - test-phpunit:
           requires:
             - build-setup
+      - build-docker-image:
+          requires:
+            - fetch-env-var
+            - lint-phpcs
+            - security-check-dependencies
+            - test-phpunit
+            - php-loc
+          context: SonarCloud
+          filters:
+            branches:
+              only:
+                - master
+                - main
+                - develop
+                - /^feature\/.*/
+                - /^release\/.*/
+                - /^hotfix\/.*/
+                - /^bugfix\/.*/
+                - SonarQube
       - hold:
           type: approval
           filters:
@@ -255,7 +344,8 @@ workflows:
                 - /^release\/.*/
       - deploy-ssh-production:
           requires:
-              - hold
+            - fetch-env-var
+            - hold
           filters:
             branches:
               only:
@@ -263,23 +353,11 @@ workflows:
                 - master
       - deploy-ssh-staging:
           requires:
+            - fetch-env-var
             - hold
           filters:
             branches:
               only:
-                - /^release\/.*/
-
-
-  container_workflow:
-    jobs:
-      - build-docker-image:
-          filters:
-            branches:
-              only:
-                - master
-                - main
-                - develop
-                - /^feature\/.*/
                 - /^release\/.*/
                 - /^hotfix\/.*/
                 - /^bugfix\/.*/
