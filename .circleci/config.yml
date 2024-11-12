@@ -295,7 +295,7 @@ jobs:
             echo "$GHCR_PAT" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
             docker pull $REPOSITORY:$TAG
             docker stop $(docker ps -q)
-            docker run -d -p 80:80 $REPOSITORY:$TAG
+            docker run -d -p 80:80 $REPOSITORY:$TAG -e APP_SECRET="test"
             EOF
 
 
