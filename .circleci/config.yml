@@ -304,14 +304,15 @@ jobs:
           command: |
             set -x
             ssh -o StrictHostKeyChecking=no $EC2_SSH_USER@$EC2_SSH_HOST \<< EOF
+            set -x
             REPOSITORY=$(echo "ghcr.io/$GH_PROJECT_USERNAME/$GH_PROJECT_REPONAME" | tr '[:upper:]' '[:lower:]' | tr -d '_')
             TAG=$(echo $CIRCLE_BRANCH | tr '[:upper:]' '[:lower:]' | tr '/' '-' | tr -cd '[:alnum:]._-' | cut -c 1-128)
             echo "$GHCR_PAT" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
-            docker pull $REPOSITORY:$TAG
+            docker pull "$REPOSITORY":"$TAG"
             if [ ! -z "$(docker ps -q)" ]; then
               docker stop $(docker ps -q)
             fi
-            docker run -d -p 80:80 $REPOSITORY:$TAG -e APP_SECRET="test"
+            docker run -d -p 80:80 "$REPOSITORY":"$TAG" -e APP_SECRET="test"
             EOF
 
 
