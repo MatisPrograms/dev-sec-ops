@@ -162,6 +162,20 @@ jobs:
           command: |
             php phploc.phar src
 
+  phpmetrics:
+    executor: php-executor
+    steps:
+      - checkout
+      - run:
+          name: Install phpmetrics
+          command: |
+            curl -sS https://getcomposer.org/installer | php
+            composer require phpmetrics/phpmetrics --dev
+      - run:
+          name: Run phpmetrics
+          command: |
+            php ./vendor/bin/phpmetrics --report-html=myreport src
+
   security-check-dependencies:
     executor: php-executor
     steps:
@@ -203,11 +217,6 @@ jobs:
     executor: builder-executor
     steps:
       - checkout
-      - attach_workspace:
-          at: workspace
-      - sonarcloud/scan
-      - setup_remote_docker:
-          docker_layer_caching: true
       - run:
           name: Build and Push Docker Image to GHCR (GitHub Container Registry)
           command: |
@@ -246,6 +255,7 @@ jobs:
 
             # Push the Docker image
             docker push $REPOSITORY:$TAG
+      - sonarcloud/scan
 
   deploy-ssh-staging:
     executor: simple-executor
@@ -311,6 +321,7 @@ workflows:
           requires:
             - build-setup
       - php-loc
+      - phpmetrics
       - security-check-dependencies:
           requires:
             - build-setup
