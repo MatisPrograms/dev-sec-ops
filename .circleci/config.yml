@@ -309,18 +309,18 @@ jobs:
             echo "GH_PROJECT_REPONAME=$GH_PROJECT_REPONAME"
             echo "CIRCLE_BRANCH=$CIRCLE_BRANCH"
 
-            REPOSITORY=$(echo "ghcr.io/$GH_PROJECT_USERNAME/$GH_PROJECT_REPONAME" | tr '[:upper:]' '[:lower:]' | tr -d '_')
-            TAG=$(echo $CIRCLE_BRANCH | tr '[:upper:]' '[:lower:]' | tr '/' '-' | tr -cd '[:alnum:]._-' | cut -c 1-128)
+            REPOSITORY=\$(echo "ghcr.io/${GH_PROJECT_USERNAME}/${GH_PROJECT_REPONAME}" | tr '[:upper:]' '[:lower:]' | tr -d '_')
+            TAG=\$(echo "${CIRCLE_BRANCH}" | tr '[:upper:]' '[:lower:]' | tr '/' '-' | tr -cd '[:alnum:]._-' | cut -c 1-128)
 
             echo "REPOSITORY=$REPOSITORY"
             echo "TAG=$TAG"
 
-            echo "$GHCR_PAT" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
-            docker pull "$REPOSITORY:$TAG"
-            if [ ! -z "$(docker ps -q)" ]; then
-              docker stop $(docker ps -q)
+            echo "${GHCR_PAT}" | docker login ghcr.io -u "${GHCR_USERNAME}" --password-stdin
+            docker pull "\$REPOSITORY:\$TAG"
+            if [ ! -z "\$(docker ps -q)" ]; then
+              docker stop \$(docker ps -q)
             fi
-            docker run -d -p 80:80 --name "$GH_PROJECT_REPONAME" "$REPOSITORY:$TAG" -e APP_SECRET="test"
+            docker run -d -p 80:80 --name "${GH_PROJECT_REPONAME}" "\$REPOSITORY:\$TAG" -e APP_SECRET="test"
             EOF
 
 
