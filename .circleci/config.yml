@@ -308,10 +308,10 @@ jobs:
             TAG=\$(echo "${CIRCLE_BRANCH}" | tr '[:upper:]' '[:lower:]' | tr '/' '-' | tr -cd '[:alnum:]._-' | cut -c 1-128)
 
             echo "${GHCR_PAT}" | docker login ghcr.io -u "${GHCR_USERNAME}" --password-stdin
-            docker pull "\$REPOSITORY:\$TAG"
             if [ ! -z "\$(docker ps -q)" ]; then
               docker stop \$(docker ps -q)
             fi
+            docker pull "\$REPOSITORY:\$TAG"
             docker run -d -p 80:80 --name "${GH_PROJECT_REPONAME}" "\$REPOSITORY:\$TAG" -e APP_SECRET="${APP_SECRET}"
             EOF
 
