@@ -213,6 +213,12 @@ jobs:
           name: Run PHPUnit
           command: ./vendor/bin/phpunit --testsuite=Unit
 
+  check-quality:
+    executor: builder-executor
+    steps:
+      - checkout
+      - sonarcloud/scan
+
   build-docker-image:
     executor: builder-executor
     steps:
@@ -259,7 +265,7 @@ jobs:
 
             # Push the Docker image
             docker push $REPOSITORY:$TAG
-      - sonarcloud/scan
+
 
   deploy-ssh-staging:
     executor: simple-executor
@@ -334,6 +340,10 @@ workflows:
       - test-phpunit:
           requires:
             - build-setup
+      - check-quality:
+          requires:
+            - build-setup
+          context: SonarCloud
       - build-docker-image:
           requires:
             - fetch-env-var
@@ -342,7 +352,7 @@ workflows:
             - test-phpunit
             - php-loc
             - phpmetrics
-          context: SonarCloud
+            - check-quality
           filters:
             branches:
               only:
@@ -353,7 +363,6 @@ workflows:
                 - /^release\/.*/
                 - /^hotfix\/.*/
                 - /^bugfix\/.*/
-                - SonarQube
       - hold:
           type: approval
           filters:
