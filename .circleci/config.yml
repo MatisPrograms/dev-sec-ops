@@ -323,11 +323,11 @@ workflows:
       - fetch-env-var
       - debug-info
       - build-setup
+      - php-loc
+      - phpmetrics
       - lint-phpcs:
           requires:
             - build-setup
-      - php-loc
-      - phpmetrics
       - security-check-dependencies:
           requires:
             - build-setup
@@ -341,6 +341,7 @@ workflows:
             - security-check-dependencies
             - test-phpunit
             - php-loc
+            - phpmetrics
           context: SonarCloud
           filters:
             branches:
@@ -360,7 +361,15 @@ workflows:
               only:
                 - main
                 - master
+      - deploy-ssh-staging:
+          requires:
+            - fetch-env-var
+          filters:
+            branches:
+              only:
                 - /^release\/.*/
+                - /^hotfix\/.*/
+                - /^bugfix\/.*/
       - deploy-ssh-production:
           requires:
             - fetch-env-var
@@ -371,13 +380,3 @@ workflows:
               only:
                 - main
                 - master
-      - deploy-ssh-staging:
-          requires:
-            - fetch-env-var
-            - hold
-          filters:
-            branches:
-              only:
-                - /^release\/.*/
-                - /^hotfix\/.*/
-                - /^bugfix\/.*/
