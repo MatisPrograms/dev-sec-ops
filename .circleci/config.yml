@@ -319,7 +319,7 @@ jobs:
               docker stop "${GH_PROJECT_REPONAME}"
               docker rm "${GH_PROJECT_REPONAME}"
             fi
-            docker run -d -p 3000:80 --name "${GH_PROJECT_REPONAME}" "\$REPOSITORY:\$TAG" -e APP_SECRET="${APP_SECRET}"
+            docker run -d -p 80:80 --name "${GH_PROJECT_REPONAME}" "\$REPOSITORY:\$TAG" -e APP_SECRET="${APP_SECRET}"
             EOF
 
 
