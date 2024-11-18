@@ -365,6 +365,7 @@ workflows:
             - security-check-dependencies
             - test-phpunit
             - php-loc
+            - phpmd-check
             - phpmetrics
             - check-quality
           filters:
