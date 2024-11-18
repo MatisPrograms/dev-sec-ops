@@ -6,11 +6,17 @@
 This project is part of the EIEIN901 course on DevSecOps and Secure Web Development. It focuses on implementing DevOps practices to enhance the security and efficiency of web applications.
 
 ## Table of Contents
-- [Introduction](#introduction)
-- [Installation](#installation)
-- [Usage](#usage)
-- [Contributing](#contributing)
-- [License](#license)
+- [dev-sec-ops](#dev-sec-ops)
+- [DevOps Project](#devops-project)
+  - [Overview](#overview)
+  - [Table of Contents](#table-of-contents)
+  - [Introduction](#introduction)
+  - [Installation](#installation)
+  - [Usage](#usage)
+  - [CircleCI](#circleci)
+    - [Testing jobs locally](#testing-jobs-locally)
+  - [Contributing](#contributing)
+  - [License](#license)
 
 ## Introduction
 In this project, we explore various DevOps tools and methodologies to automate and secure the development lifecycle of web applications.

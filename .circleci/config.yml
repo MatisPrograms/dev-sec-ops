@@ -175,6 +175,19 @@ jobs:
           name: Run phpmetrics
           command: |
             php ./vendor/bin/phpmetrics --report-html=myreport src
+  phpmd-check:
+    executor: php-executor
+    steps:
+      - checkout
+      - run:
+          name: Install phpmd
+          command: |
+            curl -sS https://getcomposer.org/installer | php
+            composer require phpmd/phpmd
+      - run:
+          name: Run phpmd
+          command: |
+            vendor/bin/phpmd src text codesize,unusedcode,naming
 
   security-check-dependencies:
     executor: php-executor
@@ -331,6 +344,7 @@ workflows:
       - build-setup
       - php-loc
       - phpmetrics
+      - phpmd-check
       - lint-phpcs:
           requires:
             - build-setup
